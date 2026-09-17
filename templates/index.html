@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>TaskFlow</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <h1>TaskFlow</h1>
+    <h2>Minhas tarefas</h2>
+
+    <div class="resumo">
+    <a href="/?status=pendente" class="resumo-item">
+        <strong>{{ total_pendentes }}</strong>
+        <span>Pendentes</span>
+    </a>
+
+    <a href="/?status=concluida" class="resumo-item">
+        <strong>{{ total_concluidas }}</strong>
+        <span>Concluídas</span>
+    </a>
+
+    <a href="/?status=atrasada" class="resumo-item">
+        <strong>{{ total_atrasadas }}</strong>
+        <span>Atrasadas</span>
+    </a>
+    </div>
+
+    <form action="/adicionar" method="POST">
+    <input type="text" name="titulo" placeholder="Digite uma nova tarefa" required>
+    <select name="prioridade">
+    <option value="Baixa">Baixa</option>
+    <option value="Média" selected>Média</option>
+    <option value="Alta">Alta</option>
+    </select>
+    <input type="date" name="prazo">
+    <button type="submit">Adicionar</button>
+    </form>
+    <div class="filtros">
+        <a href="/">Todas</a>
+        <a href="/?status=pendente">Pendentes</a>
+        <a href="/?status=concluida">Concluídas</a>
+    </div>
+    {% if tarefas %}
+        <ul>
+            {% for tarefa in tarefas %}
+                <li>
+                    <div class="task-card">
+                        <div class="task-info">
+                            <strong>{{ tarefa[1] }}</strong>
+                            <span class="prioridade prioridade-{{ tarefa[3]|lower }}">
+                                 {{ tarefa[3] }}
+                            </span>
+
+                            {% if tarefa[4] %}
+                            <span class="prazo {% if tarefa[2] == 0 and tarefa[4] < hoje %}prazo-atrasado{% endif %}">
+                                Prazo: {{ tarefa[4][8:10] }}/{{ tarefa[4][5:7] }}/{{ tarefa[4][0:4] }}
+                            </span>
+                            {% endif %}
+
+                            {% if tarefa[2] == 1 %}
+                                <span class="status concluida">Concluída</span>
+                            {% elif tarefa[4] and tarefa[4] < hoje %}
+                                <span class="status atrasada">Atrasada</span>
+                            {% else %}
+                                <span class="status pendente">Pendente</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="task-actions">
+                            {% if tarefa[2] == 0 %}
+                                <a href="/concluir/{{ tarefa[0] }}">Concluir</a>
+                            {% else %}
+                                <a href="/reabrir/{{ tarefa[0] }}">Reabrir</a>
+                            {% endif %}
+
+                            <form action="/editar/{{ tarefa[0] }}" method="POST">
+                            <input type="text" name="titulo" value="{{ tarefa[1] }}" onclick="this.select()" required>
+                            <select name="prioridade">
+                                <option value="Baixa" {% if tarefa[3] == "Baixa" %}selected{% endif %}>Baixa</option>
+                                <option value="Média" {% if tarefa[3] == "Média" %}selected{% endif %}>Média</option>
+                                <option value="Alta" {% if tarefa[3] == "Alta" %}selected{% endif %}>Alta</option>
+                            </select>
+
+                            <input type="date" name="prazo" value="{{ tarefa[4] or '' }}">
+
+                            <button type="submit">Editar</button>
+                            </form>
+                            <a href="/excluir/{{ tarefa[0] }}" onclick="return confirm('Tem certeza que deseja excluir esta tarefa?')">Excluir</a>
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Nenhuma tarefa cadastrada.</p>
+    {% endif %}
+</body>
+</html>
