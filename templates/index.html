@@ -9,9 +9,22 @@
 </head>
 
 <body>
-    <h1>TaskFlow</h1>
-    <h2>Minhas tarefas</h2>
+    <header class="app-header">
+    <div>
+        <h1>TaskFlow</h1>
+        <p>Organize suas tarefas e mantenha o foco.</p>
+    </div>
 
+    <div class="user-area">
+        <span>Olá, {{ session["usuario_nome"] }}</span>
+        <a href="/sair" class="logout-button">Sair</a>
+    </div>
+    </header>
+
+    <div class="page-title">
+        <h2>Minhas tarefas</h2>
+        <p>Acompanhe e organize tudo o que precisa fazer.</p>
+    </div>
     <div class="resumo">
     <a href="/?status=pendente" class="resumo-item">
         <strong>{{ total_pendentes }}</strong>
@@ -29,74 +42,201 @@
     </a>
     </div>
 
-    <form action="/adicionar" method="POST">
-    <input type="text" name="titulo" placeholder="Digite uma nova tarefa" required>
-    <select name="prioridade">
-    <option value="Baixa">Baixa</option>
-    <option value="Média" selected>Média</option>
-    <option value="Alta">Alta</option>
-    </select>
-    <input type="date" name="prazo">
-    <button type="submit">Adicionar</button>
+    <div class="nova-tarefa-card">
+    <div class="nova-tarefa-titulo">
+        <h3>Nova tarefa</h3>
+        <p>Adicione uma tarefa à sua lista.</p>
+    </div>
+
+    <form action="/adicionar" method="POST" class="nova-tarefa-form">
+
+        <div class="campo-titulo">
+            <label for="titulo">Tarefa</label>
+            <input
+                type="text"
+                id="titulo"
+                name="titulo"
+                placeholder="O que você precisa fazer?"
+                required
+            >
+        </div>
+
+        <div class="campo-form">
+            <label for="prioridade">Prioridade</label>
+            <select id="prioridade" name="prioridade">
+                <option value="Baixa">Baixa</option>
+                <option value="Média" selected>Média</option>
+                <option value="Alta">Alta</option>
+            </select>
+        </div>
+
+        <div class="campo-form">
+            <label for="prazo">Prazo</label>
+            <input type="date" id="prazo" name="prazo">
+        </div>
+
+        <button type="submit" class="adicionar-tarefa">
+            Adicionar tarefa
+        </button>
+
     </form>
+    </div>
     <div class="filtros">
         <a href="/">Todas</a>
         <a href="/?status=pendente">Pendentes</a>
         <a href="/?status=concluida">Concluídas</a>
+        <a href="/?status=atrasada">Atrasadas</a>
     </div>
     {% if tarefas %}
-        <ul>
-            {% for tarefa in tarefas %}
-                <li>
-                    <div class="task-card">
-                        <div class="task-info">
+
+    <ul class="task-list">
+
+        {% for tarefa in tarefas %}
+
+            <li class="task-item">
+
+                <div class="task-card">
+
+                    <div class="task-header">
+
+                        <div class="task-title">
                             <strong>{{ tarefa[1] }}</strong>
+
                             <span class="prioridade prioridade-{{ tarefa[3]|lower }}">
-                                 {{ tarefa[3] }}
+                                {{ tarefa[3] }}
                             </span>
-
-                            {% if tarefa[4] %}
-                            <span class="prazo {% if tarefa[2] == 0 and tarefa[4] < hoje %}prazo-atrasado{% endif %}">
-                                Prazo: {{ tarefa[4][8:10] }}/{{ tarefa[4][5:7] }}/{{ tarefa[4][0:4] }}
-                            </span>
-                            {% endif %}
-
-                            {% if tarefa[2] == 1 %}
-                                <span class="status concluida">Concluída</span>
-                            {% elif tarefa[4] and tarefa[4] < hoje %}
-                                <span class="status atrasada">Atrasada</span>
-                            {% else %}
-                                <span class="status pendente">Pendente</span>
-                            {% endif %}
                         </div>
 
-                        <div class="task-actions">
-                            {% if tarefa[2] == 0 %}
-                                <a href="/concluir/{{ tarefa[0] }}">Concluir</a>
-                            {% else %}
-                                <a href="/reabrir/{{ tarefa[0] }}">Reabrir</a>
-                            {% endif %}
+                        {% if tarefa[2] == 1 %}
+                            <span class="status concluida">Concluída</span>
 
-                            <form action="/editar/{{ tarefa[0] }}" method="POST">
-                            <input type="text" name="titulo" value="{{ tarefa[1] }}" onclick="this.select()" required>
-                            <select name="prioridade">
-                                <option value="Baixa" {% if tarefa[3] == "Baixa" %}selected{% endif %}>Baixa</option>
-                                <option value="Média" {% if tarefa[3] == "Média" %}selected{% endif %}>Média</option>
-                                <option value="Alta" {% if tarefa[3] == "Alta" %}selected{% endif %}>Alta</option>
-                            </select>
+                        {% elif tarefa[4] and tarefa[4] < hoje %}
+                            <span class="status atrasada">Atrasada</span>
 
-                            <input type="date" name="prazo" value="{{ tarefa[4] or '' }}">
+                        {% else %}
+                            <span class="status pendente">Pendente</span>
+                        {% endif %}
 
-                            <button type="submit">Editar</button>
-                            </form>
-                            <a href="/excluir/{{ tarefa[0] }}" onclick="return confirm('Tem certeza que deseja excluir esta tarefa?')">Excluir</a>
-                        </div>
                     </div>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>Nenhuma tarefa cadastrada.</p>
-    {% endif %}
+
+                    {% if tarefa[4] %}
+                        <div class="task-deadline {% if tarefa[2] == 0 and tarefa[4] < hoje %}prazo-atrasado{% endif %}">
+                            Prazo: {{ tarefa[4][8:10] }}/{{ tarefa[4][5:7] }}/{{ tarefa[4][0:4] }}
+                        </div>
+                    {% endif %}
+
+
+                    <div class="task-actions">
+
+                        <div class="task-main-actions">
+
+                            {% if tarefa[2] == 0 %}
+                                <a href="/concluir/{{ tarefa[0] }}" class="action-button">
+                                    Concluir
+                                </a>
+                            {% else %}
+                                <a href="/reabrir/{{ tarefa[0] }}" class="action-button">
+                                    Reabrir
+                                </a>
+                            {% endif %}
+                                    <button
+                                        type="button"
+                                        class="action-button"
+                                        onclick="toggleEdit('edit-{{ tarefa[0] }}')"
+                                    >
+                                        Editar
+                                    </button>
+                            <a
+                                href="/excluir/{{ tarefa[0] }}"
+                                class="action-button danger-button"
+                                onclick="return confirm('Tem certeza que deseja excluir esta tarefa?')"
+                            >
+                                Excluir
+                            </a>
+
+                        </div>
+
+
+                        <form
+                            id="edit-{{ tarefa[0] }}"
+                            action="/editar/{{ tarefa[0] }}"
+                            method="POST"
+                            class="edit-task-form"
+                            style="display: none;"
+                            >
+
+                            <div class="edit-field edit-title">
+                                <label>Título</label>
+                                <input
+                                    type="text"
+                                    name="titulo"
+                                    value="{{ tarefa[1] }}"
+                                    onclick="this.select()"
+                                    required
+                                >
+                            </div>
+
+                            <div class="edit-field">
+                                <label>Prioridade</label>
+
+                                <select name="prioridade">
+                                    <option value="Baixa" {% if tarefa[3] == "Baixa" %}selected{% endif %}>
+                                        Baixa
+                                    </option>
+
+                                    <option value="Média" {% if tarefa[3] == "Média" %}selected{% endif %}>
+                                        Média
+                                    </option>
+
+                                    <option value="Alta" {% if tarefa[3] == "Alta" %}selected{% endif %}>
+                                        Alta
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="edit-field">
+                                <label>Prazo</label>
+                                <input
+                                    type="date"
+                                    name="prazo"
+                                    value="{{ tarefa[4] or '' }}"
+                                >
+                            </div>
+
+                            <button type="submit" class="edit-button">
+                                Salvar alterações
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+{% else %}
+
+    <div class="empty-state">
+        <strong>Nenhuma tarefa por aqui</strong>
+        <p>Adicione uma nova tarefa para começar.</p>
+    </div>
+
+{% endif %}
+<script>
+    function toggleEdit(id) {
+        const formulario = document.getElementById(id);
+
+        if (formulario.style.display === "none") {
+            formulario.style.display = "grid";
+        } else {
+            formulario.style.display = "none";
+        }
+    }
+</script>
 </body>
 </html>
