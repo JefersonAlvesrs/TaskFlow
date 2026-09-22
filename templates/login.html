@@ -20,7 +20,11 @@
 
             <h2>Bem-vindo de volta</h2>
             <p class="auth-subtitle">Entre na sua conta para continuar.</p>
-
+                {% if erro %}
+                 <div class="auth-error">
+                     {{ erro }}
+                 </div>
+                {% endif %}
             <form action="/entrar" method="POST" class="auth-form">
 
                 <div class="form-group">

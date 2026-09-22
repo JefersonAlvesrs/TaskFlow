@@ -21,6 +21,12 @@
             <h2>Crie sua conta</h2>
             <p class="auth-subtitle">Comece a organizar suas tarefas.</p>
 
+                {% if erro %}
+                    <div class="auth-error">
+                        {{ erro }}
+                    </div>
+                {% endif %}
+
             <form action="/cadastrar" method="POST" class="auth-form">
 
                 <div class="form-group">

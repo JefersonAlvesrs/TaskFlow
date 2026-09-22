@@ -62,7 +62,10 @@ def entrar():
         session["usuario_nome"] = usuario[1]
         return redirect("/")
 
-    return "E-mail ou senha incorretos"
+    return render_template(
+    "login.html",
+    erro="E-mail ou senha incorretos."
+    )
 
 @app.route("/cadastro")
 def cadastro():
@@ -74,6 +77,19 @@ def cadastrar():
     email = request.form["email"]
     senha = request.form["senha"]
 
+    cursor.execute(
+    "SELECT id FROM usuarios WHERE email = ?",
+    (email,)
+)
+
+    usuario_existente = cursor.fetchone()
+
+    if usuario_existente:
+        return render_template(
+    "cadastro.html",
+    erro="Este e-mail já está cadastrado."
+    )
+
     senha_hash = generate_password_hash(senha)
 
     cursor.execute(
@@ -81,6 +97,9 @@ def cadastrar():
         (nome, email, senha_hash)
     )
     conexao.commit()
+
+    session["usuario_id"] = cursor.lastrowid
+    session["usuario_nome"] = nome
 
     return redirect("/")
 
@@ -173,7 +192,9 @@ except sqlite3.OperationalError:
 
 @app.route("/adicionar", methods=["POST"])
 def adicionar():
-    titulo = request.form["titulo"]
+    titulo = request.form["titulo"].strip()
+    if not titulo:
+        return redirect("/")
     prioridade = request.form["prioridade"]
     prazo = request.form["prazo"]
     cursor.execute(

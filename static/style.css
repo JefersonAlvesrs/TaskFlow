@@ -674,3 +674,13 @@ li {
 .task-list .edit-title {
     grid-column: 1 / -1;
 }
+
+.auth-error {
+    background: #fff1f1;
+    color: #b42318;
+    border: 1px solid #f5c2c0;
+    padding: 11px 13px;
+    border-radius: 8px;
+    margin-bottom: 18px;
+    font-size: 14px;
+}
