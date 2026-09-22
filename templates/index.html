@@ -82,10 +82,25 @@
     </form>
     </div>
     <div class="filtros">
-        <a href="/">Todas</a>
-        <a href="/?status=pendente">Pendentes</a>
-        <a href="/?status=concluida">Concluídas</a>
-        <a href="/?status=atrasada">Atrasadas</a>
+    <a href="/"
+       class="{% if not request.args.get('status') %}filtro-ativo{% endif %}">
+        Todas
+    </a>
+
+    <a href="/?status=pendente"
+       class="{% if request.args.get('status') == 'pendente' %}filtro-ativo{% endif %}">
+        Pendentes
+    </a>
+
+    <a href="/?status=concluida"
+       class="{% if request.args.get('status') == 'concluida' %}filtro-ativo{% endif %}">
+        Concluídas
+    </a>
+
+    <a href="/?status=atrasada"
+       class="{% if request.args.get('status') == 'atrasada' %}filtro-ativo{% endif %}">
+        Atrasadas
+    </a>
     </div>
     {% if tarefas %}
 

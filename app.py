@@ -196,6 +196,8 @@ def adicionar():
     if not titulo:
         return redirect("/")
     prioridade = request.form["prioridade"]
+    if prioridade not in ["Baixa", "Média", "Alta"]:
+        prioridade = "Média"
     prazo = request.form["prazo"]
     cursor.execute(
     "INSERT INTO tarefas (titulo, concluida, prioridade, prazo, usuario_id) VALUES (?, ?, ?, ?, ?)",
