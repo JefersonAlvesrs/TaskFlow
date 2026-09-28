@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
+import os
 from datetime import date
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "taskflow-chave-secreta"
+app.secret_key = os.environ.get("SECRET_KEY", "chave-local-taskflow")
 
 conexao = sqlite3.connect("taskflow.db", check_same_thread=False)
 cursor = conexao.cursor()
@@ -128,8 +129,11 @@ def home():
     if status == "pendente":
         cursor.execute(
             "SELECT id, titulo, concluida, prioridade, prazo "
-            "FROM tarefas WHERE concluida = 0 AND usuario_id = ? " + ordem,
-            (usuario_id,)
+            "FROM tarefas "
+            "WHERE concluida = 0 "
+            "AND (prazo = '' OR prazo IS NULL OR prazo >= ?) "
+            "AND usuario_id = ? " + ordem,
+            (date.today().isoformat(), usuario_id)
         )
 
     elif status == "concluida":
@@ -156,8 +160,11 @@ def home():
     tarefas = cursor.fetchall()
 
     cursor.execute(
-        "SELECT COUNT(*) FROM tarefas WHERE concluida = 0 AND usuario_id = ?",
-        (usuario_id,)
+    "SELECT COUNT(*) FROM tarefas "
+    "WHERE concluida = 0 "
+    "AND (prazo = '' OR prazo IS NULL OR prazo >= ?) "
+    "AND usuario_id = ?",
+    (date.today().isoformat(), usuario_id)
     )
     total_pendentes = cursor.fetchone()[0]
 
@@ -192,6 +199,9 @@ except sqlite3.OperationalError:
 
 @app.route("/adicionar", methods=["POST"])
 def adicionar():
+    if "usuario_id" not in session:
+        return redirect("/login")
+
     titulo = request.form["titulo"].strip()
     if not titulo:
         return redirect("/")
