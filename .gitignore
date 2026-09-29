@@ -1,0 +1,5 @@
+.env
+taskflow.db
+static/style-backup.css
+__pycache__/
+*.pyc

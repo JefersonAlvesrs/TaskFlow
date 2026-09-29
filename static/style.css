@@ -1547,3 +1547,10 @@ a {
     }
 }
 
+.auth-error {
+    color: #ef4444;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 12px 0;
+}
