@@ -1554,3 +1554,17 @@ a {
     font-weight: 500;
     margin: 12px 0;
 }
+
+/* Evita deslocamento horizontal no mobile */
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+input[type="date"] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+}
