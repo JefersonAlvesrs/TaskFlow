@@ -86,7 +86,15 @@ def verificar_token_recuperacao(token):
     return None
 
 def conectar_postgres():
-    return psycopg2.connect(DATABASE_URL)
+    import time
+
+    inicio = time.perf_counter()
+    conexao = psycopg2.connect(DATABASE_URL)
+    tempo = time.perf_counter() - inicio
+
+    print(f"Tempo de conexão PostgreSQL: {tempo:.3f} segundos", flush=True)
+
+    return conexao
 
 def criar_tabelas_postgres():
     conexao_pg = conectar_postgres()
