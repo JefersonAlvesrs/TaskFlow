@@ -211,7 +211,7 @@
                     method="POST"
                     class="nova-tarefa-form"
                 >
-
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="campo-titulo">
 
                         <label for="titulo">Tarefa</label>
@@ -281,32 +281,37 @@
 
                             <div class="task-row">
 
+                                    <!-- CONCLUIR / REABRIR -->
+                                    <div class="task-check">
 
-                                <!-- CONCLUIR / REABRIR -->
-                                <div class="task-check">
+                                        {% if tarefa[2] == 0 %}
 
-                                    {% if tarefa[2] == 0 %}
+                                        <form action="/concluir/{{ tarefa[0] }}" method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button
+                                                type="submit"
+                                                class="check-button"
+                                                title="Concluir tarefa"
+                                                aria-label="Concluir tarefa">
+                                            </button>
+                                        </form>
 
-                                        <a
-                                            href="/concluir/{{ tarefa[0] }}"
-                                            class="check-button"
-                                            title="Concluir tarefa"
-                                        ></a>
+                                        {% else %}
 
-                                    {% else %}
+                                        <form action="/reabrir/{{ tarefa[0] }}" method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button
+                                                type="submit"
+                                                class="check-button checked"
+                                                title="Reabrir tarefa"
+                                                aria-label="Reabrir tarefa">
+                                                ✓
+                                            </button>
+                                        </form>
 
-                                        <a
-                                            href="/reabrir/{{ tarefa[0] }}"
-                                            class="check-button checked"
-                                            title="Reabrir tarefa"
-                                        >
-                                            ✓
-                                        </a>
+                                        {% endif %}
 
-                                    {% endif %}
-
-                                </div>
-
+                                    </div>
 
                                 <!-- TÍTULO -->
                                 <div class="task-name">
@@ -394,13 +399,18 @@
                                             Editar
                                         </button>
 
+                                        
+                                            <form action="/excluir/{{ tarefa[0] }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                                        <a
-                                            href="/excluir/{{ tarefa[0] }}"
-                                            onclick="return confirm('Tem certeza que deseja excluir esta tarefa?')"
-                                        >
-                                            Excluir
-                                        </a>
+                                                <button
+                                                    type="button"
+                                                    class="menu-excluir"
+                                                    onclick="abrirExclusao(this)">
+                                                    Excluir
+                                                </button>
+                                            </form>
+
 
                                     </div>
 
@@ -417,6 +427,7 @@
                                 class="edit-task-form"
                                 style="display: none;"
                             >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                                 <div class="edit-field edit-title">
 
@@ -591,5 +602,46 @@
         });
     </script>
 
+    <dialog id="modal-exclusao" class="modal-exclusao">
+        <h2>Excluir tarefa?</h2>
+        <p>Tem certeza que deseja excluir esta tarefa? Esta ação não poderá ser desfeita.</p>
+
+        <div class="modal-exclusao-botoes">
+            <button type="button" onclick="fecharExclusao()">
+                Cancelar
+            </button>
+            <button type="button" class="btn-confirmar-exclusao"
+                    onclick="executarExclusao()">
+                Excluir tarefa
+            </button>
+        </div>
+    </dialog>
+
+    <script>
+        let formularioExclusao = null;
+
+        function abrirExclusao(botao) {
+            formularioExclusao = botao.closest("form");
+            document.getElementById("modal-exclusao").showModal();
+        }
+
+        function confirmarExclusao(event, formulario) {
+            event.preventDefault();
+            formularioExclusao = formulario;
+            document.getElementById("modal-exclusao").showModal();
+            return false;
+        }
+
+        function fecharExclusao() {
+            document.getElementById("modal-exclusao").close();
+            formularioExclusao = null;
+        }
+
+        function executarExclusao() {
+            if (formularioExclusao) {
+                formularioExclusao.submit();
+            }
+        }
+    </script>
 </body>
 </html>

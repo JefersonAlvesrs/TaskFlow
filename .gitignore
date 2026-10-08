@@ -1,5 +1,9 @@
 .env
-taskflow.db
-static/style-backup.css
+.env.*
+!.env.example
+.venv/
+venv/
 __pycache__/
 *.pyc
+*.db
+static/style-backup.css

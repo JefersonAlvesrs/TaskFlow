@@ -4,12 +4,86 @@ import os
 from dotenv import load_dotenv
 from datetime import date
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from flask import url_for
+import smtplib
+from email.message import EmailMessage
+from flask_wtf.csrf import CSRFProtect
 
 load_dotenv()
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "chave-local-taskflow")
 
+app.secret_key = os.environ["SECRET_KEY"]
+csrf = CSRFProtect(app)
 DATABASE_URL = os.environ.get("DATABASE_URL")
+
+def enviar_email(destinatario, assunto, mensagem):
+    email = EmailMessage()
+    email["From"] = os.environ.get("EMAIL_REMETENTE")
+    email["To"] = destinatario
+    email["Subject"] = assunto
+    email.set_content(mensagem)
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as smtp:
+        smtp.login(
+            os.environ.get("EMAIL_REMETENTE"),
+            os.environ.get("EMAIL_SENHA_APP")
+        )
+        smtp.send_message(email)
+
+def gerar_token_recuperacao(email):
+    conexao = conectar_postgres()
+    cursor = conexao.cursor()
+
+    cursor.execute(
+        "SELECT senha FROM usuarios WHERE LOWER(email) = %s",
+        (email,)
+    )
+    usuario = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    if not usuario:
+        return None
+
+    serializer = URLSafeTimedSerializer(app.secret_key)
+
+    return serializer.dumps(
+        [email, usuario[0]],
+        salt="recuperacao-senha"
+    )
+
+
+def verificar_token_recuperacao(token):
+    serializer = URLSafeTimedSerializer(app.secret_key)
+
+    try:
+        email, senha_anterior = serializer.loads(
+            token,
+            salt="recuperacao-senha",
+            max_age=1800
+        )
+
+        conexao = conectar_postgres()
+        cursor = conexao.cursor()
+
+        cursor.execute(
+            "SELECT senha FROM usuarios WHERE LOWER(email) = %s",
+            (email,)
+        )
+        usuario = cursor.fetchone()
+
+        cursor.close()
+        conexao.close()
+
+        if usuario and usuario[0] == senha_anterior:
+            return email
+
+    except (SignatureExpired, BadSignature, ValueError, TypeError):
+        pass
+
+    return None
 
 def conectar_postgres():
     return psycopg2.connect(DATABASE_URL)
@@ -73,6 +147,93 @@ def entrar():
         "login.html",
         erro="E-mail ou senha incorretos."
     )
+
+@app.route("/esqueci-senha")
+def esqueci_senha():
+    return render_template("esqueci_senha.html")
+
+
+@app.route("/solicitar-recuperacao", methods=["POST"])
+def solicitar_recuperacao():
+    email = request.form["email"].strip().lower()
+
+    conexao = conectar_postgres()
+    cursor = conexao.cursor()
+
+    cursor.execute(
+        "SELECT id FROM usuarios WHERE LOWER(email) = %s",
+        (email,)
+    )
+    usuario = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    mensagem = "Se o e-mail estiver cadastrado, você receberá um link de recuperação."
+
+    if usuario:
+        token = gerar_token_recuperacao(email)
+        link = url_for("redefinir_senha", token=token, _external=True)
+
+        try:
+            enviar_email(
+                email,
+                "Recuperação de senha - TaskFlow",
+                f"Olá!\n\n"
+                f"Para redefinir sua senha, acesse:\n{link}\n\n"
+                f"Este link expira em 30 minutos.\n\n"
+                f"Se você não solicitou a recuperação, ignore este e-mail."
+            )
+        except Exception:
+            app.logger.exception("Erro ao enviar e-mail de recuperação")
+
+    return render_template(
+        "esqueci_senha.html",
+        mensagem=mensagem
+    )
+
+@app.route("/redefinir-senha/<token>", methods=["GET", "POST"])
+def redefinir_senha(token):
+    email = verificar_token_recuperacao(token)
+
+    if not email:
+        return render_template(
+            "esqueci_senha.html",
+            mensagem="Este link é inválido ou expirou. Solicite uma nova recuperação."
+        ), 400
+
+    if request.method == "POST":
+        senha = request.form.get("senha", "")
+        confirmar = request.form.get("confirmar_senha", "")
+
+        if len(senha) < 8:
+            return render_template(
+                "redefinir_senha.html",
+                erro="A senha deve ter pelo menos 8 caracteres."
+            )
+
+        if senha != confirmar:
+            return render_template(
+                "redefinir_senha.html",
+                erro="As senhas não coincidem."
+            )
+
+        conexao = conectar_postgres()
+        cursor = conexao.cursor()
+
+        cursor.execute(
+            "UPDATE usuarios SET senha = %s WHERE LOWER(email) = %s",
+            (generate_password_hash(senha), email)
+        )
+
+        conexao.commit()
+        cursor.close()
+        conexao.close()
+
+        session.clear()
+        return redirect("/login")
+
+    return render_template("redefinir_senha.html")
 
 @app.route("/cadastro")
 def cadastro():
@@ -253,7 +414,7 @@ def adicionar():
     return redirect("/")
 
 
-@app.route("/concluir/<int:id>")
+@app.route("/concluir/<int:id>", methods=["POST"])
 def concluir(id):
     if "usuario_id" not in session:
         return redirect("/login")
@@ -272,7 +433,7 @@ def concluir(id):
 
     return redirect("/")
 
-@app.route("/reabrir/<int:id>")
+@app.route("/reabrir/<int:id>", methods=["POST"])
 def reabrir(id):
     if "usuario_id" not in session:
         return redirect("/login")
@@ -291,7 +452,7 @@ def reabrir(id):
 
     return redirect("/")
 
-@app.route("/excluir/<int:id>")
+@app.route("/excluir/<int:id>", methods=["POST"])
 def excluir(id):
     if "usuario_id" not in session:
         return redirect("/login")
@@ -349,6 +510,5 @@ def editar(id):
 
     return redirect("/")
 
-
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")

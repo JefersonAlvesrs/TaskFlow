@@ -1579,3 +1579,120 @@ input[type="date"] {
         max-width: 100%;
     }
 }
+
+/* Corrigir o botão Excluir no menu de tarefas */
+.task-menu form {
+    margin: 0;
+    padding: 0;
+}
+
+.menu-excluir {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.menu-excluir:hover {
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+
+dialog#modal-exclusao {
+    position: fixed;
+    inset: 0;
+    width: min(420px, 90vw);
+    max-width: 90vw;
+    margin: auto;
+    padding: 28px;
+    border: none;
+    border-radius: 16px;
+    background: #ffffff;
+    color: #111827;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+dialog#modal-exclusao::backdrop {
+    background: rgba(15, 23, 42, 0.55);
+}
+
+dialog#modal-exclusao h2 {
+    font-size: 22px;
+    margin: 0 0 12px;
+}
+
+dialog#modal-exclusao p {
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0 0 24px;
+}
+
+dialog#modal-exclusao .modal-exclusao-botoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+dialog#modal-exclusao button {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+dialog#modal-exclusao button.btn-confirmar-exclusao {
+    background: #dc2626;
+    color: white;
+}
+
+dialog#modal-exclusao button.btn-confirmar-exclusao:hover {
+    background: #b91c1c;
+}
+
+.task-menu-dropdown form {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.task-menu-dropdown .menu-excluir {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 9px 10px;
+    margin: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #334155;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: left;
+    cursor: pointer;
+}
+
+.task-menu-dropdown .menu-excluir:hover {
+    background: #f1f5f9;
+}
+
+.task-check form {
+    margin: 0;
+    padding: 0;
+}
+
+.task-check button.check-button {
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: inherit;
+    cursor: pointer;
+}

@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar senha - TaskFlow</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="auth-page">
+
+    <main class="auth-container">
+
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <div class="brand-icon">✓</div>
+                <span>TaskFlow</span>
+            </div>
+            <p>Organize suas tarefas. Simplifique seu dia.</p>
+        </div>
+
+        <div class="auth-card">
+
+            <h2>Recuperar senha</h2>
+            <p class="auth-subtitle">
+                Informe seu e-mail para receber um link de recuperação.
+            </p>
+
+            {% if mensagem %}
+                <p class="auth-subtitle">{{ mensagem }}</p>
+            {% endif %}
+
+            <form action="{{ url_for('solicitar_recuperacao') }}"
+                  method="POST" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="seu@email.com"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="auth-button">
+                    Enviar link de recuperação
+                </button>
+
+            </form>
+
+            <p class="auth-footer">
+                <a href="{{ url_for('login') }}">Voltar ao login</a>
+            </p>
+
+        </div>
+
+    </main>
+
+</body>
+</html>

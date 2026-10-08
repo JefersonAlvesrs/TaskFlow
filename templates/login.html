@@ -30,6 +30,7 @@
                  </div>
                 {% endif %}
             <form action="/entrar" method="POST" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-group">
                     <label for="email">E-mail</label>
@@ -56,6 +57,12 @@
                 <button type="submit" class="auth-button">
                     Entrar
                 </button>
+
+                <p class="auth-footer">
+                    <a href="{{ url_for('esqueci_senha') }}">
+                        Esqueceu sua senha?
+                    </a>
+                </p>
 
             </form>
 
