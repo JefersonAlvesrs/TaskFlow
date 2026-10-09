@@ -9,8 +9,9 @@ from datetime import date
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask import url_for
-import smtplib
-from email.message import EmailMessage
+import json
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 from flask_wtf.csrf import CSRFProtect
 
 load_dotenv()
@@ -21,18 +22,36 @@ csrf = CSRFProtect(app)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def enviar_email(destinatario, assunto, mensagem):
-    email = EmailMessage()
-    email["From"] = os.environ.get("EMAIL_REMETENTE")
-    email["To"] = destinatario
-    email["Subject"] = assunto
-    email.set_content(mensagem)
+    """Envia e-mail transacional pela API HTTPS da Brevo (compatível com Render)."""
+    chave_api = os.environ.get("BREVO_API_KEY")
+    if not chave_api:
+        raise RuntimeError("BREVO_API_KEY não configurada")
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as smtp:
-        smtp.login(
-            os.environ.get("EMAIL_REMETENTE"),
-            os.environ.get("EMAIL_SENHA_APP")
-        )
-        smtp.send_message(email)
+    dados = {
+        "sender": {"name": "TaskFlow", "email": "jefersoncjg@gmail.com"},
+        "to": [{"email": destinatario}],
+        "subject": assunto,
+        "textContent": mensagem,
+    }
+    requisicao = Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=json.dumps(dados).encode("utf-8"),
+        headers={
+            "accept": "application/json",
+            "content-type": "application/json",
+            "api-key": chave_api,
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(requisicao, timeout=15) as resposta:
+            if resposta.status not in (200, 201, 202):
+                raise RuntimeError(f"Brevo retornou HTTP {resposta.status}")
+    except HTTPError as erro:
+        # Não registrar corpo da resposta para evitar exposição de dados.
+        raise RuntimeError(f"Falha no envio pela Brevo (HTTP {erro.code})") from erro
+    except URLError as erro:
+        raise RuntimeError("Não foi possível conectar à API da Brevo") from erro
 
 def gerar_token_recuperacao(email):
     conexao = conectar_postgres()
