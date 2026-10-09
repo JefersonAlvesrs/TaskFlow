@@ -6,7 +6,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import time
 import os
 from dotenv import load_dotenv
-from datetime import date
+from datetime import date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask import url_for
@@ -29,8 +29,16 @@ app.secret_key = os.environ["SECRET_KEY"]
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax"
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30)
 )
+
+@app.before_request
+def controlar_sessao():
+    if "usuario_id" in session:
+        session.permanent = True
+        session.modified = True
+
 csrf = CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
