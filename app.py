@@ -114,8 +114,14 @@ def gerar_token_recuperacao(email):
 
     serializer = URLSafeTimedSerializer(app.secret_key)
 
+    import hashlib
+
+    identificador = hashlib.sha256(
+        usuario[0].encode("utf-8")
+    ).hexdigest()
+
     return serializer.dumps(
-        [email, usuario[0]],
+        [email, identificador],
         salt="recuperacao-senha"
     )
 
@@ -124,7 +130,7 @@ def verificar_token_recuperacao(token):
     serializer = URLSafeTimedSerializer(app.secret_key)
 
     try:
-        email, senha_anterior = serializer.loads(
+        email, identificador_anterior = serializer.loads(
             token,
             salt="recuperacao-senha",
             max_age=1800
@@ -142,8 +148,15 @@ def verificar_token_recuperacao(token):
         cursor.close()
         conexao.close()
 
-        if usuario and usuario[0] == senha_anterior:
-            return email
+        if usuario:
+            import hashlib
+
+            identificador_atual = hashlib.sha256(
+                usuario[0].encode("utf-8")
+            ).hexdigest()
+
+            if identificador_atual == identificador_anterior:
+                return email
 
     except (SignatureExpired, BadSignature, ValueError, TypeError):
         pass
@@ -259,7 +272,7 @@ def login():
 @app.route("/entrar", methods=["POST"])
 @limiter.limit("5 per minute")
 def entrar():
-    email = request.form["email"]
+    email = request.form["email"].strip().lower()
     senha = request.form["senha"]
 
     conexao = conectar_postgres()
@@ -381,8 +394,14 @@ def cadastro():
 @app.route("/cadastrar", methods=["POST"])
 def cadastrar():
     nome = request.form["nome"]
-    email = request.form["email"]
+    email = request.form["email"].strip().lower()
     senha = request.form["senha"]
+
+    if len(senha) < 8:
+        return render_template(
+            "cadastro.html",
+            erro="A senha deve ter pelo menos 8 caracteres."
+        )
 
     conexao = conectar_postgres()
     cursor = conexao.cursor()
