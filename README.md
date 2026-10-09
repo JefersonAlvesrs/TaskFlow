@@ -82,8 +82,6 @@ Acesse `http://127.0.0.1:5000` no navegador.
 
 ## 📷 Capturas de tela
 
-## 📷 Capturas de tela
-
 ### Painel de tarefas
 ![Painel de tarefas](screenshots/painel.png)
 
