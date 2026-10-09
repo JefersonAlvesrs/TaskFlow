@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session, g, has_req
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
 from threading import Lock
+from werkzeug.middleware.proxy_fix import ProxyFix
 import time
 import os
 from dotenv import load_dotenv
@@ -13,12 +14,46 @@ import json
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 load_dotenv()
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=1,
+    x_proto=1
+)
 
 app.secret_key = os.environ["SECRET_KEY"]
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax"
+)
 csrf = CSRFProtect(app)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://"
+)
+
+@app.errorhandler(429)
+def limite_excedido(erro):
+    mensagem = "Muitas tentativas. Aguarde e tente novamente mais tarde."
+
+    if request.path == "/solicitar-recuperacao":
+        return render_template(
+            "esqueci_senha.html",
+            mensagem=mensagem
+        ), 429
+
+    return render_template(
+        "login.html",
+        erro=mensagem
+    ), 429
+
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def enviar_email(destinatario, assunto, mensagem):
@@ -214,6 +249,7 @@ def login():
     return render_template("login.html")
 
 @app.route("/entrar", methods=["POST"])
+@limiter.limit("5 per minute")
 def entrar():
     email = request.form["email"]
     senha = request.form["senha"]
@@ -248,6 +284,7 @@ def esqueci_senha():
 
 
 @app.route("/solicitar-recuperacao", methods=["POST"])
+@limiter.limit("3 per hour")
 def solicitar_recuperacao():
     email = request.form["email"].strip().lower()
 
