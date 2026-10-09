@@ -1,5 +1,8 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, g, has_request_context
 import psycopg2
+from psycopg2.pool import ThreadedConnectionPool
+from threading import Lock
+import time
 import os
 from dotenv import load_dotenv
 from datetime import date
@@ -85,16 +88,78 @@ def verificar_token_recuperacao(token):
 
     return None
 
+# O pool é criado apenas no primeiro acesso ao banco, por processo do servidor.
+_pool_postgres = None
+_pool_lock = Lock()
+
+
+def obter_pool_postgres():
+    global _pool_postgres
+    if _pool_postgres is None:
+        with _pool_lock:
+            if _pool_postgres is None:
+                _pool_postgres = ThreadedConnectionPool(
+                    minconn=1,
+                    maxconn=5,
+                    dsn=DATABASE_URL,
+                )
+    return _pool_postgres
+
+
+class ConexaoReutilizavel:
+    """Mantém a interface psycopg2; close() devolve a conexão ao pool."""
+
+    def __init__(self, conexao, pool):
+        self._conexao = conexao
+        self._pool = pool
+        self._fechada = False
+
+    def __getattr__(self, nome):
+        return getattr(self._conexao, nome)
+
+    def close(self):
+        if self._fechada:
+            return
+        self._fechada = True
+        try:
+            # Finaliza SELECTs e qualquer transação não confirmada.
+            self._conexao.rollback()
+        except Exception:
+            # Não reutiliza uma conexão cujo estado pode estar inválido.
+            self._pool.putconn(self._conexao, close=True)
+            raise
+        else:
+            self._pool.putconn(self._conexao)
+        finally:
+            if has_request_context():
+                abertas = getattr(g, "conexoes_postgres", None)
+                if abertas is not None:
+                    abertas.discard(self)
+
+
 def conectar_postgres():
-    import time
-
     inicio = time.perf_counter()
-    conexao = psycopg2.connect(DATABASE_URL)
+    pool = obter_pool_postgres()
+    conexao = ConexaoReutilizavel(pool.getconn(), pool)
     tempo = time.perf_counter() - inicio
+    print(f"Tempo para obter conexão PostgreSQL: {tempo:.3f} segundos", flush=True)
 
-    print(f"Tempo de conexão PostgreSQL: {tempo:.3f} segundos", flush=True)
-
+    if has_request_context():
+        if not hasattr(g, "conexoes_postgres"):
+            g.conexoes_postgres = set()
+        g.conexoes_postgres.add(conexao)
     return conexao
+
+
+@app.teardown_request
+def devolver_conexoes_pendentes(erro):
+    # Também devolve conexões quando uma rota falha antes do close().
+    for conexao in list(getattr(g, "conexoes_postgres", ())):
+        try:
+            conexao.close()
+        except Exception:
+            app.logger.exception("Erro ao devolver conexão PostgreSQL ao pool")
+
 
 def criar_tabelas_postgres():
     conexao_pg = conectar_postgres()
@@ -135,6 +200,8 @@ def entrar():
     senha = request.form["senha"]
 
     conexao = conectar_postgres()
+    import time
+    inicio_consulta = time.perf_counter()
     cursor = conexao.cursor()
 
     cursor.execute(
@@ -402,9 +469,11 @@ def adicionar():
         prioridade = "Média"
 
     prazo = request.form["prazo"]
-
     conexao = conectar_postgres()
     cursor = conexao.cursor()
+
+    import time
+    inicio_consulta = time.perf_counter()
 
     cursor.execute(
         """
@@ -416,6 +485,8 @@ def adicionar():
     )
 
     conexao.commit()
+    print(f"Tempo do INSERT + COMMIT: {time.perf_counter() - inicio_consulta:.3f} segundos", flush=True)
+
     cursor.close()
     conexao.close()
 
